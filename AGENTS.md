@@ -2,7 +2,7 @@
 
 ## Project Purpose
 
-PiCamTS is a standalone Raspberry Pi camera recording daemon.
+RpiCamTs is a standalone Raspberry Pi camera recording daemon.
 
 The intended future pipeline is:
 
@@ -26,16 +26,20 @@ prototype.
 - Prefer small, reviewable changes.
 - Update `README.md` when project behavior changes.
 
-## Current Stage
+## Current Source Structure
 
-The project currently contains a single source file:
-
-```text
-src/rpi_cam_ts.cpp
-```
-
-This file is a pipeline verification prototype. It should confirm:
+The pipeline verification code is split into small modules under `src/`. It
+should confirm:
 
 Camera -> Capture -> H264 Encoding -> Frame Info Dump
+
+Keep module boundaries simple:
+
+- process launch logic belongs in `mtxrpicam_process.*`
+- pipe packet format belongs in `packet_io.*`
+- camera parameter generation belongs in `camera_params.*`
+- H264 inspection belongs in `h264_inspector.*`
+- frame statistics belongs in `stats.*`
+- app orchestration belongs in `app.*`
 
 Do not implement TS recording until explicitly requested.

@@ -10,7 +10,7 @@ DST_DIR="${ROOT_DIR}/dst"
 OUTPUT_BIN="${DST_DIR}/RpiCamTs"
 
 log() {
-    echo "[PiCamTS] $*"
+    echo "[RpiCamTs] $*"
 }
 
 ensure_submodule() {
@@ -122,7 +122,7 @@ install_binary() {
         exit 1
     fi
 
-    rm -f "${DST_DIR}/PiCamTS"
+    rm -f "${DST_DIR}/RpiCamTs"
     cp "${BUILD_DIR}/RpiCamTs" "${OUTPUT_BIN}"
 
     log "Done: ${OUTPUT_BIN}"

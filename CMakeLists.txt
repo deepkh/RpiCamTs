@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(PiCamTS
+project(RpiCamTs
     VERSION 0.1.0
     LANGUAGES CXX
 )
@@ -11,6 +11,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(RpiCamTs
     src/rpi_cam_ts.cpp
+    src/app.cpp
+    src/camera_params.cpp
+    src/h264_inspector.cpp
+    src/mtxrpicam_process.cpp
+    src/packet_io.cpp
+    src/path_utils.cpp
+    src/signal_handler.cpp
+    src/stats.cpp
+)
+
+target_include_directories(RpiCamTs PRIVATE
+    src
 )
 
 target_compile_options(RpiCamTs PRIVATE

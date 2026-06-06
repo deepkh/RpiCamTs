@@ -1,6 +1,6 @@
-# PiCamTS
+# RpiCamTs
 
-PiCamTS is a lightweight Raspberry Pi camera recording daemon project.
+RpiCamTs is a lightweight Raspberry Pi camera recording daemon project.
 
 The long-term goal is to record camera video using the following pipeline:
 
@@ -8,7 +8,7 @@ The long-term goal is to record camera video using the following pipeline:
 Camera Capture -> H264 Encoding -> MPEG-TS -> Storage
 ```
 
-PiCamTS is planned to support variable frame rate recording and local MPEG-TS storage.
+RpiCamTs is planned to support variable frame rate recording and local MPEG-TS storage.
 
 ## Current Status
 
@@ -20,6 +20,21 @@ config pipe, reads H264 encoded video packets, and prints frame, FPS,
 timestamp, packet size, and NALU information.
 
 MPEG-TS recording is not implemented yet.
+
+## Source Layout
+
+The current pipeline verification implementation is split into several small
+modules:
+
+- `rpi_cam_ts.cpp` - program entry point
+- `app.cpp` - main pipeline orchestration
+- `camera_params.cpp` - camera parameter generation
+- `mtxrpicam_process.cpp` - backend process launch
+- `packet_io.cpp` - pipe packet read/write helpers
+- `h264_inspector.cpp` - H264 NALU information extraction
+- `stats.cpp` - frame statistics
+- `signal_handler.cpp` - shutdown handling
+- `path_utils.cpp` - path helpers
 
 ## Prototype Source
 
