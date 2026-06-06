@@ -26,7 +26,15 @@ void prepend_environment_path(const char *key, const std::string &path) {
     setenv(key, new_path.c_str(), 1);
 }
 
-void set_libpisp_config_file() {
+void set_libpisp_config_file(const std::string &runtime_directory) {
+    const std::string bundled_config =
+        runtime_directory + "/share/libpisp/backend_default_config.json";
+    if (!runtime_directory.empty() &&
+        access(bundled_config.c_str(), R_OK) == 0) {
+        setenv("LIBPISP_BE_CONFIG_FILE", bundled_config.c_str(), 1);
+        return;
+    }
+
     const std::array<const char *, 4> candidates = {
         "./third_party/mediamtx-rpicamera-fork/build/subprojects/libpisp/src/"
         "libpisp/backend/backend_default_config.json",
@@ -75,6 +83,11 @@ void configure_child_environment(int config_fd, int video_fd) {
         prepend_environment_path("LD_LIBRARY_PATH", path);
     }
 
+    const std::string runtime_directory = executable_directory();
+    if (!runtime_directory.empty()) {
+        prepend_environment_path("LD_LIBRARY_PATH", runtime_directory);
+    }
+
     const std::array<const char *, 3> ipa_module_paths = {
         "./build/mediamtx-rpicamera-fork/install/lib/aarch64-linux-gnu/"
         "libcamera",
@@ -89,12 +102,29 @@ void configure_child_environment(int config_fd, int video_fd) {
         }
     }
 
+    if (!runtime_directory.empty()) {
+        const std::string bundled_ipa_modules =
+            runtime_directory + "/libcamera";
+        if (access(bundled_ipa_modules.c_str(), R_OK) == 0) {
+            prepend_environment_path("LIBCAMERA_IPA_MODULE_PATH",
+                                     bundled_ipa_modules);
+        }
+    }
+
     const char *ipa_config_path =
         "./build/mediamtx-rpicamera-fork/install/share/libcamera/ipa";
     if (access(ipa_config_path, R_OK) == 0) {
         prepend_environment_path("LIBCAMERA_IPA_CONFIG_PATH", ipa_config_path);
     }
-    set_libpisp_config_file();
+    if (!runtime_directory.empty()) {
+        const std::string bundled_ipa_config =
+            runtime_directory + "/share/libcamera/ipa";
+        if (access(bundled_ipa_config.c_str(), R_OK) == 0) {
+            prepend_environment_path("LIBCAMERA_IPA_CONFIG_PATH",
+                                     bundled_ipa_config);
+        }
+    }
+    set_libpisp_config_file(runtime_directory);
 }
 
 } // namespace

@@ -183,6 +183,17 @@ int RpiCamTsApp::run() {
         }
     }
 
+    if (options_.output_path_explicit) {
+        const std::string output_path =
+            absolute_path_allow_missing(options_.output_path);
+        if (output_path.empty()) {
+            std::cerr << "[RpiCamTs] Invalid output path: "
+                      << options_.output_path << '\n';
+            return 1;
+        }
+        options_.output_path = output_path;
+    }
+
     chdir_to_project_root();
 
     ConfigLoadResult config;

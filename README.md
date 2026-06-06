@@ -85,8 +85,9 @@ The script will:
 2. Build `mediamtx-rpicamera-fork` under `build/mediamtx-rpicamera-fork/`
 3. Generate CMake build files under `build/`
 4. Build `RpiCamTs`
-5. Copy the final binary to `dst/RpiCamTs`
-6. Copy shared libraries produced by the prototype build to `dst/`
+5. Copy `RpiCamTs` and the `mtxrpicam` backend to `dst/`
+6. Copy camera shared libraries, IPA modules, and runtime data to `dst/`
+7. Create the deployment archive `/tmp/RpiCamTs-dst.tar.gz`
 
 ## Output
 
@@ -95,6 +96,7 @@ After building, the binary should be available at:
 ```text
 build/RpiCamTs
 dst/RpiCamTs
+dst/mtxrpicam
 ```
 
 The prototype build outputs remain under:
@@ -104,7 +106,18 @@ build/mediamtx-rpicamera-fork/
 ```
 
 Any installed `*.so` and versioned `*.so.*` files from that build are also
-copied directly into `dst/`.
+copied directly into `dst/`. Camera tuning and PiSP runtime data are copied
+under `dst/share/`, and IPA modules are copied under `dst/libcamera/`. The
+resulting `dst/` directory can be copied as a unit to another compatible
+64-bit Raspberry Pi OS system.
+
+The deployment archive contains the complete `dst/` directory and preserves
+the shared-library symlinks. Transfer and extract it on another Pi with:
+
+```bash
+scp /tmp/RpiCamTs-dst.tar.gz pi@TARGET_PI:~/
+ssh pi@TARGET_PI 'tar -xzf ~/RpiCamTs-dst.tar.gz'
+```
 
 Run it:
 
@@ -137,6 +150,8 @@ Use a custom config and output together:
 ```
 
 The output file is overwritten if it already exists.
+Relative output paths are resolved from the directory where RpiCamTs is
+launched.
 
 The `.h264` extension is also accepted for raw H264 output.
 

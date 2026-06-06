@@ -3,7 +3,9 @@
 #include <array>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <string>
+#include <system_error>
 
 #include <unistd.h>
 
@@ -47,16 +49,31 @@ std::string absolute_path(const std::string &path) {
     return result;
 }
 
-void chdir_to_project_root() {
+std::string absolute_path_allow_missing(const std::string &path) {
+    std::error_code error;
+    const std::filesystem::path absolute = std::filesystem::absolute(path, error);
+    if (error) {
+        return {};
+    }
+    return absolute.lexically_normal().string();
+}
+
+std::string executable_directory() {
     const std::string executable = absolute_path("/proc/self/exe");
     if (executable.empty()) {
+        return {};
+    }
+    return parent_directory(executable);
+}
+
+void chdir_to_project_root() {
+    const std::string executable_dir = executable_directory();
+    if (executable_dir.empty()) {
         return;
     }
-
-    const std::string executable_directory = parent_directory(executable);
     const std::array<std::string, 2> candidates = {
-        executable_directory,
-        parent_directory(executable_directory),
+        executable_dir,
+        parent_directory(executable_dir),
     };
 
     for (const std::string &candidate : candidates) {
@@ -68,7 +85,7 @@ void chdir_to_project_root() {
         }
     }
 
-    if (chdir(executable_directory.c_str()) != 0) {
+    if (chdir(executable_dir.c_str()) != 0) {
         std::perror("chdir executable directory");
     }
 }

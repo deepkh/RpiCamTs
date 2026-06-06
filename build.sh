@@ -8,6 +8,8 @@ MEDIAMTX_BUILD_DIR="${BUILD_DIR}/mediamtx-rpicamera-fork"
 MEDIAMTX_INSTALL_DIR="${MEDIAMTX_BUILD_DIR}/install"
 DST_DIR="${ROOT_DIR}/dst"
 OUTPUT_BIN="${DST_DIR}/RpiCamTs"
+BACKEND_BIN="${MEDIAMTX_INSTALL_DIR}/bin/mtxrpicam"
+DEPLOY_ARCHIVE="${TMPDIR:-/tmp}/RpiCamTs-dst.tar.gz"
 
 log() {
     echo "[RpiCamTs] $*"
@@ -113,7 +115,7 @@ build_project() {
 }
 
 install_binary() {
-    log "Installing binary to dst/..."
+    log "Installing binaries to dst/..."
 
     mkdir -p "${DST_DIR}"
 
@@ -126,6 +128,16 @@ install_binary() {
     cp "${BUILD_DIR}/RpiCamTs" "${OUTPUT_BIN}"
 
     log "Done: ${OUTPUT_BIN}"
+
+    if [[ ! -x "${BACKEND_BIN}" ]]; then
+        echo "Error: built backend not found: ${BACKEND_BIN}" >&2
+        exit 1
+    fi
+
+    rm -f "${DST_DIR}/mtxrpicam"
+    cp "${BACKEND_BIN}" "${DST_DIR}/mtxrpicam"
+
+    log "Done: ${DST_DIR}/mtxrpicam"
 }
 
 install_mediamtx_shared_libraries() {
@@ -145,11 +157,50 @@ install_mediamtx_shared_libraries() {
     done < <(
         find "${MEDIAMTX_INSTALL_DIR}" \
             \( -type f -o -type l \) \
-            \( -name '*.so' -o -name '*.so.[0-9]*' \) \
+            \( -name '*.so' -o -name '*.so.[0-9]*' -o -name '*.so.sign' \) \
+            ! -path '*/libcamera/ipa_*.so*' \
             -print0
     )
 
     log "Installed ${library_count} shared library file(s) to ${DST_DIR}"
+}
+
+install_runtime_data() {
+    local ipa_module_source="${MEDIAMTX_INSTALL_DIR}/lib/aarch64-linux-gnu/libcamera"
+    local ipa_source="${MEDIAMTX_INSTALL_DIR}/share/libcamera/ipa"
+    local pisp_config_source="${MEDIAMTX_INSTALL_DIR}/share/libpisp/backend_default_config.json"
+
+    log "Installing camera runtime data to dst/share/..."
+
+    if [[ ! -d "${ipa_module_source}" ]]; then
+        echo "Error: libcamera IPA modules not found: ${ipa_module_source}" >&2
+        exit 1
+    fi
+    if [[ ! -d "${ipa_source}" ]]; then
+        echo "Error: libcamera IPA configuration not found: ${ipa_source}" >&2
+        exit 1
+    fi
+    if [[ ! -f "${pisp_config_source}" ]]; then
+        echo "Error: libpisp backend configuration not found: ${pisp_config_source}" >&2
+        exit 1
+    fi
+
+    rm -rf "${DST_DIR}/libcamera" "${DST_DIR}/share"
+    mkdir -p "${DST_DIR}/libcamera" "${DST_DIR}/share/libcamera" \
+        "${DST_DIR}/share/libpisp"
+    cp -a "${ipa_module_source}"/ipa_rpi_*.so* "${DST_DIR}/libcamera/"
+    cp -a "${ipa_source}" "${DST_DIR}/share/libcamera/"
+    cp "${pisp_config_source}" "${DST_DIR}/share/libpisp/"
+}
+
+create_deployment_archive() {
+    log "Creating deployment archive..."
+
+    require_command tar
+    rm -f "${DEPLOY_ARCHIVE}"
+    tar -C "${ROOT_DIR}" -czf "${DEPLOY_ARCHIVE}" "$(basename "${DST_DIR}")"
+
+    log "Done: ${DEPLOY_ARCHIVE}"
 }
 
 main() {
@@ -159,6 +210,8 @@ main() {
     build_project
     install_binary
     install_mediamtx_shared_libraries
+    install_runtime_data
+    create_deployment_archive
 }
 
 main "$@"

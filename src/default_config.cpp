@@ -48,7 +48,7 @@ Shutter: 0
 Metering: centre
 Gain: 0
 EV: 0
-ROI: "0,0,0,0"
+ROI: ""
 HDR: off
 
 TuningFile: ""
