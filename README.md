@@ -39,13 +39,14 @@ modules:
 - `signal_handler.cpp` - shutdown handling
 - `path_utils.cpp` - path helpers
 
-## Prototype Source
+## Camera Backend
 
-The early prototype code is based on work from:
+RpiCamTs uses
+[mediamtx-rpicamera](https://github.com/bluenviron/mediamtx-rpicamera), the
+Raspberry Pi camera component from the MediaMTX project, as its camera backend.
+This repository builds the backend from the following fork:
 
-```text
-https://github.com/deepkh/mediamtx-rpicamera-fork
-```
+[deepkh/mediamtx-rpicamera-fork](https://github.com/deepkh/mediamtx-rpicamera-fork)
 
 The submodule is checked out from branch:
 
@@ -58,6 +59,9 @@ Submodule location:
 ```text
 third_party/mediamtx-rpicamera-fork
 ```
+
+The submodule is maintained and licensed separately. See its
+[`LICENSE`](third_party/mediamtx-rpicamera-fork/LICENSE) file for details.
 
 ## Dependencies
 
@@ -245,3 +249,10 @@ Future stages may include:
 - Add segment recording
 - Add storage retention policy
 - Add systemd daemon support
+
+## License
+
+RpiCamTs is released under the [MIT License](LICENSE).
+
+The `mediamtx-rpicamera-fork` submodule and its bundled dependencies retain
+their own copyright and license terms.
