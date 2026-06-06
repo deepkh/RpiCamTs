@@ -1,0 +1,80 @@
+# Example RpiCamTs configuration.
+#
+# Copy this file to the project root as:
+#
+#   RpiCamTs.yml
+#
+# Then run:
+#
+#   ./dst/RpiCamTs
+#
+# Or use it directly:
+#
+#   ./dst/RpiCamTs examples/RpiCamTs.yml
+
+# Local RpiCamTs option.
+# If omitted, RpiCamTs will auto-detect the mtxrpicam path.
+# MtxRpiCamPath: "./third_party/mediamtx-rpicamera-fork/mtxrpicam"
+
+# Camera parameters. These names match the parameters accepted by the
+# mtxrpicam parameters_unserialize function.
+
+LogLevel: info
+CameraID: 0
+
+Width: 2304
+Height: 1296
+
+HFlip: 0
+VFlip: 0
+
+Brightness: 0
+Contrast: 1
+Saturation: 1
+Sharpness: 1
+
+Exposure: normal
+AWB: auto
+AWBGainRed: 0
+AWBGainBlue: 0
+
+Denoise: auto
+Shutter: 0
+Metering: centre
+Gain: 0
+EV: 0
+ROI: "0,0,0,0"
+HDR: 0
+
+# Leave empty to use RpiCamTs's default tuning file resolution.
+TuningFile: ""
+
+Mode: ""
+
+MinFPS: 5.0
+MaxFPS: 60.0
+
+AfMode: continuous
+AfRange: normal
+AfSpeed: normal
+LensPosition: 0
+AfWindow: "0,0,0,0"
+FlickerPeriod: 0
+
+TextOverlayEnable: 0
+TextOverlay: ""
+
+Codec: auto
+IDRPeriod: 60
+Bitrate: 10000000
+
+HardwareH264Profile: main
+HardwareH264Level: "4.1"
+
+SoftwareH264Profile: baseline
+SoftwareH264Level: "4.1"
+
+SecondaryWidth: 0
+SecondaryHeight: 0
+SecondaryFPS: 0
+SecondaryMJPEGQuality: 60

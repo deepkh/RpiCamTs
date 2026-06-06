@@ -3,7 +3,10 @@
 #include <string>
 
 struct RpiCamTsOptions {
-    std::string mtxrpicam_path;
+    std::string config_path = "RpiCamTs.yml";
+    bool config_path_explicit = false;
+    bool generate_default_config = false;
+    std::string generate_default_config_path;
 };
 
 class RpiCamTsApp {

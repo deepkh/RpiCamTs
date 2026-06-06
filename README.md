@@ -29,6 +29,8 @@ modules:
 - `rpi_cam_ts.cpp` - program entry point
 - `app.cpp` - main pipeline orchestration
 - `camera_params.cpp` - camera parameter generation
+- `config_loader.cpp` - flat YAML configuration loading
+- `default_config.cpp` - default YAML configuration generation
 - `mtxrpicam_process.cpp` - backend process launch
 - `packet_io.cpp` - pipe packet read/write helpers
 - `h264_inspector.cpp` - H264 NALU information extraction
@@ -97,14 +99,62 @@ Run it:
 ./dst/RpiCamTs
 ```
 
-To use a custom backend path:
-
-```bash
-./dst/RpiCamTs /path/to/mtxrpicam
-```
-
 On a Raspberry Pi camera system, the program launches the backend and prints
 one line per encoded H264 frame. Press `Ctrl+C` to stop it cleanly.
+
+## Configuration File
+
+RpiCamTs can load camera parameters from a flat YAML config file. Run with a
+custom config:
+
+```bash
+./dst/RpiCamTs camera_test.yml
+```
+
+When no config argument is provided, RpiCamTs tries to load `RpiCamTs.yml`.
+If that default file does not exist, it warns and continues with built-in
+defaults. An explicitly requested missing or invalid config is an error.
+
+Start from the example config:
+
+```bash
+cp examples/RpiCamTs.yml RpiCamTs.yml
+./dst/RpiCamTs
+```
+
+The supported format is one `Key: Value` pair per line, with optional quotes,
+blank lines, and `#` comments. Camera keys match the backend's
+`parameters_unserialize` function. Config values override environment
+variables, which override built-in defaults.
+
+`MtxRpiCamPath` is an optional RpiCamTs-only setting for selecting the backend
+executable. It is not sent to the camera parameter parser.
+
+## Generate Default Config
+
+Generate a default YAML config file and exit without starting the camera
+pipeline:
+
+```bash
+./dst/RpiCamTs --generate-default-config RpiCamTs.yml
+```
+
+Then run with the default filename:
+
+```bash
+./dst/RpiCamTs
+```
+
+Custom output names are also supported:
+
+```bash
+./dst/RpiCamTs --generate-default-config test_camera.yml
+./dst/RpiCamTs test_camera.yml
+```
+
+For safety, RpiCamTs will not overwrite an existing config file.
+
+MPEG-TS recording is not implemented yet.
 
 ## Roadmap
 

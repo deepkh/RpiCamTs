@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <map>
 #include <string>
 
 #include <unistd.h>
@@ -68,7 +69,14 @@ std::string base64_encode(const std::string &source) {
     return output;
 }
 
-std::string environment_value(const char *key, const std::string &fallback) {
+std::string parameter_value(
+    const std::map<std::string, std::string> &config_values, const char *key,
+    const std::string &fallback) {
+    const auto config_value = config_values.find(key);
+    if (config_value != config_values.end()) {
+        return config_value->second;
+    }
+
     const char *value = std::getenv(key);
     return value != nullptr ? value : fallback;
 }
@@ -85,18 +93,20 @@ void append_parameter(std::string &parameters, const char *key,
 
 } // namespace
 
-std::string build_camera_parameters() {
+std::string build_camera_parameters(
+    const std::map<std::string, std::string> &config_values) {
     std::string parameters;
     parameters.reserve(1024);
 
-    const auto raw = [&parameters](const char *key, const char *fallback) {
-        append_parameter(parameters, key, environment_value(key, fallback),
-                         false);
+    const auto raw = [&parameters, &config_values](const char *key,
+                                                   const char *fallback) {
+        append_parameter(parameters, key,
+                         parameter_value(config_values, key, fallback), false);
     };
-    const auto encoded = [&parameters](const char *key,
-                                       const char *fallback) {
-        append_parameter(parameters, key, environment_value(key, fallback),
-                         true);
+    const auto encoded = [&parameters, &config_values](const char *key,
+                                                       const char *fallback) {
+        append_parameter(parameters, key,
+                         parameter_value(config_values, key, fallback), true);
     };
 
     encoded("LogLevel", "info");
@@ -120,9 +130,12 @@ std::string build_camera_parameters() {
     raw("EV", "0.0");
     encoded("ROI", "");
     raw("HDR", "0");
-    append_parameter(parameters, "TuningFile",
-                     environment_value("TuningFile", default_tuning_file()),
-                     true);
+    std::string tuning_file =
+        parameter_value(config_values, "TuningFile", default_tuning_file());
+    if (tuning_file.empty()) {
+        tuning_file = default_tuning_file();
+    }
+    append_parameter(parameters, "TuningFile", tuning_file, true);
     encoded("Mode", "");
     raw("MinFPS", "5.0");
     raw("MaxFPS", "60.0");

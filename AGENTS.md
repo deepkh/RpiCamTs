@@ -43,3 +43,21 @@ Keep module boundaries simple:
 - app orchestration belongs in `app.*`
 
 Do not implement TS recording until explicitly requested.
+
+## Configuration Rule
+
+RpiCamTs supports loading camera parameters from a flat YAML file.
+
+The config keys should match the parameters accepted by the backend
+`parameters_unserialize` function.
+
+Keep the config format simple:
+
+```yaml
+Key: Value
+```
+
+Do not add a third-party YAML dependency unless explicitly requested.
+
+Local-only RpiCamTs options, such as `MtxRpiCamPath`, must not be serialized
+and sent to the backend camera parameter parser.

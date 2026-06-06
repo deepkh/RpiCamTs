@@ -1,6 +1,8 @@
 #include "app.h"
 
 #include "camera_params.h"
+#include "config_loader.h"
+#include "default_config.h"
 #include "h264_inspector.h"
 #include "mtxrpicam_process.h"
 #include "packet_io.h"
@@ -13,6 +15,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <stdexcept>
 #include <utility>
 
 #include <unistd.h>
@@ -99,23 +102,68 @@ RpiCamTsApp::RpiCamTsApp(RpiCamTsOptions options)
     : options_(std::move(options)) {}
 
 int RpiCamTsApp::run() {
-    std::string backend_path;
-    if (!options_.mtxrpicam_path.empty()) {
-        backend_path = absolute_path(options_.mtxrpicam_path);
-        if (backend_path.empty() || !is_executable(backend_path)) {
-            std::cerr << "mtxrpicam is not executable: "
-                      << options_.mtxrpicam_path << '\n';
+    if (options_.generate_default_config) {
+        std::string error_message;
+        if (!write_default_config_file(options_.generate_default_config_path,
+                                       error_message)) {
+            std::cerr << "[RpiCamTs] " << error_message << '\n';
+            return 1;
+        }
+
+        std::cout << "[RpiCamTs] Generated default config: "
+                  << options_.generate_default_config_path << '\n';
+        return 0;
+    }
+
+    std::string config_path = options_.config_path;
+    if (options_.config_path_explicit) {
+        config_path = absolute_path(config_path);
+        if (config_path.empty()) {
+            std::cerr << "[RpiCamTs] Config file not found: "
+                      << options_.config_path << '\n';
             return 1;
         }
     }
 
     chdir_to_project_root();
+
+    ConfigLoadResult config;
+    if (!config_path.empty() && config_file_exists(config_path)) {
+        try {
+            config = load_config_file(config_path);
+        } catch (const std::runtime_error &error) {
+            std::cerr << "[RpiCamTs] Failed to load config: " << error.what()
+                      << '\n';
+            return 1;
+        }
+        std::cerr << "[RpiCamTs] Loaded config: " << config.path << '\n';
+    } else if (options_.config_path_explicit) {
+        std::cerr << "[RpiCamTs] Config file not found: "
+                  << options_.config_path << '\n';
+        return 1;
+    } else if (!config_path.empty()) {
+        std::cerr << "[RpiCamTs] Default config not found: " << config_path
+                  << ", using built-in defaults\n";
+    }
+
+    std::string backend_path;
+    const auto configured_backend = config.values.find("MtxRpiCamPath");
+    if (configured_backend != config.values.end() &&
+        !configured_backend->second.empty()) {
+        backend_path = absolute_path(configured_backend->second);
+        if (backend_path.empty() || !is_executable(backend_path)) {
+            std::cerr << "[RpiCamTs] mtxrpicam is not executable: "
+                      << configured_backend->second << '\n';
+            return 1;
+        }
+    }
+
     if (backend_path.empty()) {
         backend_path = default_mtxrpicam_path();
     }
     if (backend_path.empty()) {
         std::cerr << "mtxrpicam was not found. Build the submodule with "
-                     "./build.sh or pass its path as argv[1].\n";
+                     "./build.sh or set MtxRpiCamPath in the config file.\n";
         return 1;
     }
 
@@ -153,7 +201,7 @@ int RpiCamTsApp::run() {
     close_fd(video_pipe[1]);
 
     int result = 0;
-    const std::string parameters = build_camera_parameters();
+    const std::string parameters = build_camera_parameters(config.values);
     if (!write_config_packet(config_pipe[1], parameters)) {
         std::perror("write camera configuration");
         result = 1;
