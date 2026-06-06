@@ -62,9 +62,10 @@ Do not add a third-party YAML dependency unless explicitly requested.
 Local-only RpiCamTs options, such as `MtxRpiCamPath`, must not be serialized
 and sent to the backend camera parameter parser.
 
-## Current Output Stage
+## Output Stage
 
-RpiCamTs currently writes the encoded H264 payload to a raw `.264` file.
+RpiCamTs writes encoded H264 payload to raw `.264`/`.h264` files or muxes it
+into MPEG-TS `.ts` files.
 
 Rules:
 
@@ -72,4 +73,17 @@ Rules:
 - Do not write timestamps to the `.264` file.
 - Only write encoded H264 payload bytes.
 - Keep frame/FPS/NALU info dump behavior.
-- Do not implement MPEG-TS output until explicitly requested.
+
+## MPEG-TS Output Rule
+
+MPEG-TS output must use FFmpeg libraries.
+
+Do not manually write TS packets unless explicitly requested.
+
+For variable frame rate support:
+
+- Use camera/video-pipe timestamps as the source of truth.
+- Do not generate timestamps from frame count.
+- Do not assume fixed FPS.
+- Do not force constant frame duration.
+- Convert input timestamps to the muxer time base with `av_rescale_q`.

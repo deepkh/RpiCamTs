@@ -1,8 +1,10 @@
 #include "camera_params.h"
 
 #include <array>
+#include <cerrno>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <map>
 #include <string>
 
@@ -160,4 +162,20 @@ std::string build_camera_parameters(
     raw("SecondaryMJPEGQuality", "0");
 
     return parameters;
+}
+
+int get_camera_param_int(
+    const std::map<std::string, std::string> &config_values,
+    const std::string &key, int default_value) {
+    const std::string value =
+        parameter_value(config_values, key.c_str(), std::to_string(default_value));
+
+    char *end = nullptr;
+    errno = 0;
+    const long parsed = std::strtol(value.c_str(), &end, 10);
+    if (errno != 0 || end == value.c_str() || *end != '\0' || parsed <= 0 ||
+        parsed > std::numeric_limits<int>::max()) {
+        return 0;
+    }
+    return static_cast<int>(parsed);
 }

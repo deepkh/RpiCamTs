@@ -69,6 +69,20 @@ std::size_t h264_start_code_size(const std::uint8_t *buffer,
     return 0;
 }
 
+bool h264_contains_nalu_type(const std::uint8_t *buffer, std::size_t size,
+                             std::uint8_t expected_type) {
+    for (std::size_t offset = 0; offset < size; ++offset) {
+        const std::size_t start_code_size =
+            h264_start_code_size(buffer, size, offset);
+        const std::size_t header_offset = offset + start_code_size;
+        if (start_code_size != 0 && header_offset < size &&
+            (buffer[header_offset] & 0x1fU) == expected_type) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::vector<std::uint8_t> h264_copy_rbsp(const std::uint8_t *payload,
                                          std::size_t size) {
     std::vector<std::uint8_t> rbsp;
@@ -169,4 +183,31 @@ std::string collect_h264_nalu_info(const std::uint8_t *buffer,
         offset = next_start_code;
     }
     return information;
+}
+
+bool h264_contains_idr_frame(const std::uint8_t *data, std::size_t size) {
+    return h264_contains_nalu_type(data, size, 5);
+}
+
+bool h264_contains_video_frame(const std::uint8_t *data, std::size_t size) {
+    for (std::uint8_t type = 1; type <= 5; ++type) {
+        if (h264_contains_nalu_type(data, size, type)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool h264_looks_like_annex_b(const std::uint8_t *data, std::size_t size) {
+    if (data == nullptr) {
+        return false;
+    }
+    for (std::size_t offset = 0; offset < size; ++offset) {
+        const std::size_t start_code_size =
+            h264_start_code_size(data, size, offset);
+        if (start_code_size != 0 && offset + start_code_size < size) {
+            return true;
+        }
+    }
+    return false;
 }

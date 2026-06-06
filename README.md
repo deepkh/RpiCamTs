@@ -8,7 +8,7 @@ The long-term goal is to record camera video using the following pipeline:
 Camera Capture -> H264 Encoding -> MPEG-TS -> Storage
 ```
 
-RpiCamTs is planned to support variable frame rate recording and local MPEG-TS storage.
+RpiCamTs preserves camera timestamps when writing local MPEG-TS output.
 
 ## Current Status
 
@@ -18,9 +18,7 @@ It launches the `mtxrpicam` backend from the
 `mediamtx-rpicamera-fork` submodule, sends camera parameters through the
 config pipe, reads H264 encoded video packets, and prints frame, FPS,
 timestamp, packet size, and NALU information. It also writes the encoded H264
-payload to a raw `.264` file.
-
-MPEG-TS recording is not implemented yet.
+payload to either a raw `.264`/`.h264` file or an MPEG-TS `.ts` file.
 
 ## Source Layout
 
@@ -33,6 +31,7 @@ modules:
 - `config_loader.cpp` - flat YAML configuration loading
 - `default_config.cpp` - default YAML configuration generation
 - `h264_file_writer.cpp` - raw H264 output
+- `ts_muxer_ffmpeg.cpp` - FFmpeg MPEG-TS output
 - `mtxrpicam_process.cpp` - backend process launch
 - `packet_io.cpp` - pipe packet read/write helpers
 - `h264_inspector.cpp` - H264 NALU information extraction
@@ -59,6 +58,18 @@ Submodule location:
 ```text
 third_party/mediamtx-rpicamera-fork
 ```
+
+## Dependencies
+
+RpiCamTs uses FFmpeg libraries for MPEG-TS output. On Debian or Raspberry Pi
+OS, install the development packages with:
+
+```bash
+sudo apt install pkg-config libavformat-dev libavcodec-dev libavutil-dev
+```
+
+CMake stops during configuration with a dependency error if these libraries
+cannot be found.
 
 ## Build
 
@@ -125,14 +136,38 @@ Use a custom config and output together:
 ./dst/RpiCamTs camera.yml output.264
 ```
 
-The output file is overwritten if it already exists. This stage writes only
-the raw H264 stream; MPEG-TS recording is not implemented yet.
+The output file is overwritten if it already exists.
+
+The `.h264` extension is also accepted for raw H264 output.
+
+## MPEG-TS Output
+
+RpiCamTs can mux the camera's H264 stream into MPEG-TS using FFmpeg libraries.
+Run with the default config:
+
+```bash
+./dst/RpiCamTs output.ts
+```
+
+Run with a custom config:
+
+```bash
+./dst/RpiCamTs camera.yml output.ts
+```
+
+Camera timestamps from the video pipe are normalized at the first frame and
+used as packet PTS and DTS values. No fixed frame duration is generated, so
+variable frame rate timing is preserved as supplied by the camera. Separate
+SPS/PPS encoder output is joined to its following video frame so each muxed
+packet represents one H264 access unit. If two frame timestamps resolve to the
+same 90 kHz MPEG-TS tick, the later timestamp is advanced by one tick to keep
+DTS strictly increasing.
 
 Usage:
 
 ```text
-RpiCamTs [output.264]
-RpiCamTs [config.yml] [output.264]
+RpiCamTs [output.264|output.h264|output.ts]
+RpiCamTs [config.yml] [output.264|output.h264|output.ts]
 RpiCamTs --generate-default-config <output.yml>
 ```
 
@@ -188,14 +223,10 @@ Custom output names are also supported:
 
 For safety, RpiCamTs will not overwrite an existing config file.
 
-MPEG-TS recording is not implemented yet.
-
 ## Roadmap
 
 Future stages may include:
 
-- Add MPEG-TS writer
-- Add variable frame rate timestamp handling
 - Add segment recording
 - Add storage retention policy
 - Add systemd daemon support

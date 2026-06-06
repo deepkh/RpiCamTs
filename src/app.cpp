@@ -10,6 +10,7 @@
 #include "path_utils.h"
 #include "signal_handler.h"
 #include "stats.h"
+#include "ts_muxer_ffmpeg.h"
 
 #include <cerrno>
 #include <cstdio>
@@ -18,6 +19,7 @@
 #include <string>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 #include <unistd.h>
 
@@ -31,8 +33,11 @@ enum class DrainResult {
     WriteError,
 };
 
-DrainResult drain_video_pipe(int fd, H264FileWriter &h264_writer) {
+DrainResult drain_video_pipe(int fd, OutputMode output_mode,
+                             H264FileWriter &h264_writer,
+                             TsMuxerFFmpeg &ts_muxer) {
     FrameStats stats;
+    std::vector<std::uint8_t> pending_h264_prefix;
 
     while (!stop_requested()) {
         VideoPacket packet;
@@ -66,13 +71,54 @@ DrainResult drain_video_pipe(int fd, H264FileWriter &h264_writer) {
             continue;
         }
 
-        if (!packet.payload.empty()) {
+        if (!packet.payload.empty() && output_mode == OutputMode::RawH264) {
             std::string error_message;
             if (!h264_writer.write(packet.payload.data(), packet.payload.size(),
                                    error_message)) {
                 std::cerr << "[RpiCamTs] Failed to write H264 output: "
                           << error_message << '\n';
                 return DrainResult::WriteError;
+            }
+        } else if (!packet.payload.empty()) {
+            if (!packet.has_timestamp) {
+                std::cerr << "[RpiCamTs] Warning: skipping H264 packet without "
+                             "a camera timestamp for MPEG-TS output\n";
+            } else if (!h264_looks_like_annex_b(packet.payload.data(),
+                                                packet.payload.size())) {
+                std::cerr << "[RpiCamTs] Warning: skipping H264 packet that "
+                             "does not contain an Annex B start code\n";
+            } else if (!h264_contains_video_frame(packet.payload.data(),
+                                                  packet.payload.size())) {
+                pending_h264_prefix.insert(pending_h264_prefix.end(),
+                                           packet.payload.begin(),
+                                           packet.payload.end());
+            } else {
+                std::string error_message;
+                const bool is_keyframe = h264_contains_idr_frame(
+                    packet.payload.data(), packet.payload.size());
+
+                const std::uint8_t *data = packet.payload.data();
+                std::size_t size = packet.payload.size();
+                std::vector<std::uint8_t> access_unit;
+                if (!pending_h264_prefix.empty()) {
+                    access_unit.reserve(pending_h264_prefix.size() + size);
+                    access_unit.insert(access_unit.end(),
+                                       pending_h264_prefix.begin(),
+                                       pending_h264_prefix.end());
+                    access_unit.insert(access_unit.end(), packet.payload.begin(),
+                                       packet.payload.end());
+                    pending_h264_prefix.clear();
+                    data = access_unit.data();
+                    size = access_unit.size();
+                }
+
+                if (!ts_muxer.write_h264_packet(
+                        data, size, packet.timestamp, is_keyframe,
+                        error_message)) {
+                    std::cerr << "[RpiCamTs] Failed to write MPEG-TS output: "
+                              << error_message << '\n';
+                    return DrainResult::WriteError;
+                }
             }
         }
 
@@ -180,14 +226,29 @@ int RpiCamTsApp::run() {
     }
 
     H264FileWriter h264_writer;
+    TsMuxerFFmpeg ts_muxer;
     std::string output_error;
-    if (!h264_writer.open(options_.h264_output_path, output_error)) {
-        std::cerr << "[RpiCamTs] Failed to open H264 output file: "
-                  << output_error << '\n';
-        return 1;
+    if (options_.output_mode == OutputMode::RawH264) {
+        if (!h264_writer.open(options_.output_path, output_error)) {
+            std::cerr << "[RpiCamTs] Failed to open H264 output file: "
+                      << output_error << '\n';
+            return 1;
+        }
+        std::cout << "[RpiCamTs] Writing raw H264 stream to: "
+                  << h264_writer.path() << '\n' << std::flush;
+    } else {
+        TsMuxerConfig ts_config;
+        ts_config.output_path = options_.output_path;
+        ts_config.width = get_camera_param_int(config.values, "Width", 2304);
+        ts_config.height = get_camera_param_int(config.values, "Height", 1296);
+        if (!ts_muxer.open(ts_config, output_error)) {
+            std::cerr << "[RpiCamTs] Failed to open MPEG-TS output file: "
+                      << output_error << '\n';
+            return 1;
+        }
+        std::cout << "[RpiCamTs] Writing MPEG-TS stream to: "
+                  << ts_muxer.path() << '\n' << std::flush;
     }
-    std::cout << "[RpiCamTs] Writing raw H264 stream to: "
-              << h264_writer.path() << '\n' << std::flush;
 
     if (!install_signal_handlers()) {
         std::perror("sigaction");
@@ -229,8 +290,8 @@ int RpiCamTsApp::run() {
         result = 1;
     } else {
         std::cerr << "[RpiCamTs] camera configuration sent\n";
-        const DrainResult drain_result =
-            drain_video_pipe(video_pipe[0], h264_writer);
+        const DrainResult drain_result = drain_video_pipe(
+            video_pipe[0], options_.output_mode, h264_writer, ts_muxer);
         if (drain_result == DrainResult::ReadError ||
             drain_result == DrainResult::BackendError ||
             drain_result == DrainResult::WriteError) {
@@ -254,6 +315,8 @@ int RpiCamTsApp::run() {
         result = 1;
     }
 
+    h264_writer.close();
+    ts_muxer.close();
     std::cerr << "[RpiCamTs] stopped\n";
     return result;
 }
