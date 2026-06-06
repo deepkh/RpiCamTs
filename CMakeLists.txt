@@ -15,6 +15,7 @@ add_executable(RpiCamTs
     src/camera_params.cpp
     src/config_loader.cpp
     src/default_config.cpp
+    src/h264_file_writer.cpp
     src/h264_inspector.cpp
     src/mtxrpicam_process.cpp
     src/packet_io.cpp

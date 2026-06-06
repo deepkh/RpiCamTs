@@ -61,3 +61,15 @@ Do not add a third-party YAML dependency unless explicitly requested.
 
 Local-only RpiCamTs options, such as `MtxRpiCamPath`, must not be serialized
 and sent to the backend camera parameter parser.
+
+## Current Output Stage
+
+RpiCamTs currently writes the encoded H264 payload to a raw `.264` file.
+
+Rules:
+
+- Do not write pipe packet headers to the `.264` file.
+- Do not write timestamps to the `.264` file.
+- Only write encoded H264 payload bytes.
+- Keep frame/FPS/NALU info dump behavior.
+- Do not implement MPEG-TS output until explicitly requested.

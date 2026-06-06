@@ -17,7 +17,8 @@ The project currently builds `RpiCamTs`, a pipeline verification program.
 It launches the `mtxrpicam` backend from the
 `mediamtx-rpicamera-fork` submodule, sends camera parameters through the
 config pipe, reads H264 encoded video packets, and prints frame, FPS,
-timestamp, packet size, and NALU information.
+timestamp, packet size, and NALU information. It also writes the encoded H264
+payload to a raw `.264` file.
 
 MPEG-TS recording is not implemented yet.
 
@@ -31,6 +32,7 @@ modules:
 - `camera_params.cpp` - camera parameter generation
 - `config_loader.cpp` - flat YAML configuration loading
 - `default_config.cpp` - default YAML configuration generation
+- `h264_file_writer.cpp` - raw H264 output
 - `mtxrpicam_process.cpp` - backend process launch
 - `packet_io.cpp` - pipe packet read/write helpers
 - `h264_inspector.cpp` - H264 NALU information extraction
@@ -99,8 +101,40 @@ Run it:
 ./dst/RpiCamTs
 ```
 
-On a Raspberry Pi camera system, the program launches the backend and prints
-one line per encoded H264 frame. Press `Ctrl+C` to stop it cleanly.
+On a Raspberry Pi camera system, the program launches the backend, writes the
+raw H264 stream to `video.264`, and prints one line per encoded H264 frame.
+Press `Ctrl+C` to stop it cleanly.
+
+## Raw H264 Output
+
+Run with the default config and default output:
+
+```bash
+./dst/RpiCamTs
+```
+
+The default output file is `video.264`. To select another output file:
+
+```bash
+./dst/RpiCamTs output.264
+```
+
+Use a custom config and output together:
+
+```bash
+./dst/RpiCamTs camera.yml output.264
+```
+
+The output file is overwritten if it already exists. This stage writes only
+the raw H264 stream; MPEG-TS recording is not implemented yet.
+
+Usage:
+
+```text
+RpiCamTs [output.264]
+RpiCamTs [config.yml] [output.264]
+RpiCamTs --generate-default-config <output.yml>
+```
 
 ## Configuration File
 

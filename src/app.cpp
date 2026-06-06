@@ -3,6 +3,7 @@
 #include "camera_params.h"
 #include "config_loader.h"
 #include "default_config.h"
+#include "h264_file_writer.h"
 #include "h264_inspector.h"
 #include "mtxrpicam_process.h"
 #include "packet_io.h"
@@ -27,9 +28,10 @@ enum class DrainResult {
     EndOfFile,
     BackendError,
     ReadError,
+    WriteError,
 };
 
-DrainResult drain_video_pipe(int fd) {
+DrainResult drain_video_pipe(int fd, H264FileWriter &h264_writer) {
     FrameStats stats;
 
     while (!stop_requested()) {
@@ -62,6 +64,16 @@ DrainResult drain_video_pipe(int fd) {
         }
         if (packet.kind != 'd') {
             continue;
+        }
+
+        if (!packet.payload.empty()) {
+            std::string error_message;
+            if (!h264_writer.write(packet.payload.data(), packet.payload.size(),
+                                   error_message)) {
+                std::cerr << "[RpiCamTs] Failed to write H264 output: "
+                          << error_message << '\n';
+                return DrainResult::WriteError;
+            }
         }
 
         const FrameStatsSnapshot snapshot = stats.update(packet.timestamp);
@@ -167,6 +179,16 @@ int RpiCamTsApp::run() {
         return 1;
     }
 
+    H264FileWriter h264_writer;
+    std::string output_error;
+    if (!h264_writer.open(options_.h264_output_path, output_error)) {
+        std::cerr << "[RpiCamTs] Failed to open H264 output file: "
+                  << output_error << '\n';
+        return 1;
+    }
+    std::cout << "[RpiCamTs] Writing raw H264 stream to: "
+              << h264_writer.path() << '\n' << std::flush;
+
     if (!install_signal_handlers()) {
         std::perror("sigaction");
         return 1;
@@ -207,9 +229,11 @@ int RpiCamTsApp::run() {
         result = 1;
     } else {
         std::cerr << "[RpiCamTs] camera configuration sent\n";
-        const DrainResult drain_result = drain_video_pipe(video_pipe[0]);
+        const DrainResult drain_result =
+            drain_video_pipe(video_pipe[0], h264_writer);
         if (drain_result == DrainResult::ReadError ||
-            drain_result == DrainResult::BackendError) {
+            drain_result == DrainResult::BackendError ||
+            drain_result == DrainResult::WriteError) {
             result = 1;
         } else if (drain_result == DrainResult::EndOfFile &&
                    !stop_requested()) {
