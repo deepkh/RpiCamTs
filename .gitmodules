@@ -1,0 +1,4 @@
+[submodule "third_party/mediamtx-rpicamera-fork"]
+	path = third_party/mediamtx-rpicamera-fork
+	url = https://github.com/deepkh/mediamtx-rpicamera-fork
+	branch = v2.5.5_fake_stream_reader

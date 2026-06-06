@@ -3,3 +3,12 @@ build/
 dst/
 log/
 tool/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.log
+.DS_Store
+.cache/
