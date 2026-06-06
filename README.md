@@ -12,16 +12,14 @@ PiCamTS is planned to support variable frame rate recording and local MPEG-TS st
 
 ## Current Status
 
-This repository is currently only a project skeleton.
+The project currently builds `RpiCamTs`, a pipeline verification program.
 
-The real recording pipeline is not implemented yet.
+It launches the `mtxrpicam` backend from the
+`mediamtx-rpicamera-fork` submodule, sends camera parameters through the
+config pipe, reads H264 encoded video packets, and prints frame, FPS,
+timestamp, packet size, and NALU information.
 
-Current features:
-
-- Basic C++ entry point
-- CMake build setup
-- `build.sh` helper script
-- `mediamtx-rpicamera-fork` added as a git submodule and built as prototype code
+MPEG-TS recording is not implemented yet.
 
 ## Prototype Source
 
@@ -56,8 +54,8 @@ The script will:
 1. Initialize/update the submodule
 2. Build `mediamtx-rpicamera-fork` under `build/mediamtx-rpicamera-fork/`
 3. Generate CMake build files under `build/`
-4. Build PiCamTS
-5. Copy the final binary to `dst/PiCamTS`
+4. Build `RpiCamTs`
+5. Copy the final binary to `dst/RpiCamTs`
 6. Copy shared libraries produced by the prototype build to `dst/`
 
 ## Output
@@ -65,7 +63,8 @@ The script will:
 After building, the binary should be available at:
 
 ```text
-dst/PiCamTS
+build/RpiCamTs
+dst/RpiCamTs
 ```
 
 The prototype build outputs remain under:
@@ -80,21 +79,22 @@ copied directly into `dst/`.
 Run it:
 
 ```bash
-./dst/PiCamTS
+./dst/RpiCamTs
 ```
 
-Expected output:
+To use a custom backend path:
 
-```text
-Hello from PiCamTS
+```bash
+./dst/RpiCamTs /path/to/mtxrpicam
 ```
+
+On a Raspberry Pi camera system, the program launches the backend and prints
+one line per encoded H264 frame. Press `Ctrl+C` to stop it cleanly.
 
 ## Roadmap
 
 Future stages may include:
 
-- Extract camera packet reader logic
-- Add H264 packet handling
 - Add MPEG-TS writer
 - Add variable frame rate timestamp handling
 - Add segment recording

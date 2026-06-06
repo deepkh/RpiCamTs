@@ -7,7 +7,7 @@ BUILD_DIR="${ROOT_DIR}/build"
 MEDIAMTX_BUILD_DIR="${BUILD_DIR}/mediamtx-rpicamera-fork"
 MEDIAMTX_INSTALL_DIR="${MEDIAMTX_BUILD_DIR}/install"
 DST_DIR="${ROOT_DIR}/dst"
-OUTPUT_BIN="${DST_DIR}/PiCamTS"
+OUTPUT_BIN="${DST_DIR}/RpiCamTs"
 
 log() {
     echo "[PiCamTS] $*"
@@ -107,7 +107,7 @@ generate_build_files() {
 }
 
 build_project() {
-    log "Building PiCamTS..."
+    log "Building RpiCamTs..."
 
     cmake --build "${BUILD_DIR}"
 }
@@ -117,12 +117,13 @@ install_binary() {
 
     mkdir -p "${DST_DIR}"
 
-    if [[ ! -x "${BUILD_DIR}/PiCamTS" ]]; then
-        echo "Error: built binary not found: ${BUILD_DIR}/PiCamTS" >&2
+    if [[ ! -x "${BUILD_DIR}/RpiCamTs" ]]; then
+        echo "Error: built binary not found: ${BUILD_DIR}/RpiCamTs" >&2
         exit 1
     fi
 
-    cp "${BUILD_DIR}/PiCamTS" "${OUTPUT_BIN}"
+    rm -f "${DST_DIR}/PiCamTS"
+    cp "${BUILD_DIR}/RpiCamTs" "${OUTPUT_BIN}"
 
     log "Done: ${OUTPUT_BIN}"
 }

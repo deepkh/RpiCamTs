@@ -10,7 +10,8 @@ Camera Capture -> H264 Encoding -> MPEG-TS -> Storage
 
 The project should eventually support variable frame rate recording and reliable local storage.
 
-The current implementation is only an initial project skeleton.
+The current implementation is a camera and H264 pipeline verification
+prototype.
 
 ## Development Rules
 
@@ -27,12 +28,14 @@ The current implementation is only an initial project skeleton.
 
 ## Current Stage
 
-This stage only creates:
+The project currently contains a single source file:
 
-- git repository initialization
-- mediamtx-rpicamera-fork submodule
-- README
-- AGENTS.md
-- minimal C++ entry point
-- CMake build system
-- build.sh helper script
+```text
+src/rpi_cam_ts.cpp
+```
+
+This file is a pipeline verification prototype. It should confirm:
+
+Camera -> Capture -> H264 Encoding -> Frame Info Dump
+
+Do not implement TS recording until explicitly requested.

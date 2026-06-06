@@ -9,11 +9,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(PiCamTS
-    src/main.cpp
+add_executable(RpiCamTs
+    src/rpi_cam_ts.cpp
 )
 
-target_compile_options(PiCamTS PRIVATE
+target_compile_options(RpiCamTs PRIVATE
     -Wall
     -Wextra
     -Wpedantic
