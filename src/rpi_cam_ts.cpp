@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -40,9 +41,10 @@ bool set_output_path(const std::string &path, RpiCamTsOptions &options) {
 void print_usage(const char *program_name) {
     std::cerr << "Usage:\n"
               << "  " << program_name
-              << " [output.264|output.h264|output.ts]\n"
+              << " [-v|--verbose] [output.264|output.h264|output.ts]\n"
               << "  " << program_name
-              << " [config.yml] [output.264|output.h264|output.ts]\n"
+              << " [-v|--verbose] [config.yml] "
+                 "[output.264|output.h264|output.ts]\n"
               << "  " << program_name
               << " --generate-default-config <output.yml>\n";
 }
@@ -51,10 +53,20 @@ void print_usage(const char *program_name) {
 
 int main(int argc, char **argv) {
     RpiCamTsOptions options;
-    if (argc == 1) {
+    std::vector<std::string> arguments;
+    for (int index = 1; index < argc; ++index) {
+        const std::string argument = argv[index];
+        if (argument == "-v" || argument == "--verbose") {
+            options.verbose = true;
+        } else {
+            arguments.push_back(argument);
+        }
+    }
+
+    if (arguments.empty()) {
         // Use the default option values.
-    } else if (argc == 2) {
-        const std::string argument = argv[1];
+    } else if (arguments.size() == 1) {
+        const std::string &argument = arguments[0];
         if (is_config_path(argument)) {
             options.config_path = argument;
             options.config_path_explicit = true;
@@ -62,14 +74,14 @@ int main(int argc, char **argv) {
             print_usage(argv[0]);
             return 1;
         }
-    } else if (argc == 3 &&
-               std::string(argv[1]) == "--generate-default-config" &&
-               is_config_path(argv[2])) {
+    } else if (arguments.size() == 2 &&
+               arguments[0] == "--generate-default-config" &&
+               is_config_path(arguments[1])) {
         options.generate_default_config = true;
-        options.generate_default_config_path = argv[2];
-    } else if (argc == 3 && is_config_path(argv[1]) &&
-               set_output_path(argv[2], options)) {
-        options.config_path = argv[1];
+        options.generate_default_config_path = arguments[1];
+    } else if (arguments.size() == 2 && is_config_path(arguments[0]) &&
+               set_output_path(arguments[1], options)) {
+        options.config_path = arguments[0];
         options.config_path_explicit = true;
     } else {
         print_usage(argv[0]);

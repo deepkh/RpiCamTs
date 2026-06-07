@@ -35,7 +35,7 @@ enum class DrainResult {
 
 DrainResult drain_video_pipe(int fd, OutputMode output_mode,
                              H264FileWriter &h264_writer,
-                             TsMuxerFFmpeg &ts_muxer) {
+                             TsMuxerFFmpeg &ts_muxer, bool verbose) {
     FrameStats stats;
     std::vector<std::uint8_t> pending_h264_prefix;
 
@@ -122,26 +122,29 @@ DrainResult drain_video_pipe(int fd, OutputMode output_mode,
             }
         }
 
-        const FrameStatsSnapshot snapshot = stats.update(packet.timestamp);
-        const std::string nalu_information = collect_h264_nalu_info(
-            packet.payload.data(), packet.payload.size());
+        if (verbose) {
+            const FrameStatsSnapshot snapshot = stats.update(packet.timestamp);
+            const std::string nalu_information = collect_h264_nalu_info(
+                packet.payload.data(), packet.payload.size());
 
-        std::cout << std::setfill('0') << "Frame:" << std::setw(7)
-                  << snapshot.frame_count << " Fps:" << std::setw(2)
-                  << static_cast<int>(snapshot.instant_fps)
-                  << std::setfill(' ') << std::fixed << std::setprecision(1)
-                  << " AvgFps:" << snapshot.avg_fps << '/' << snapshot.min_fps
-                  << '/' << snapshot.max_fps << std::setprecision(3)
-                  << " AvgDiff:" << snapshot.avg_diff << '/'
-                  << snapshot.min_diff << '/' << snapshot.max_diff
-                  << " ts:" << snapshot.timestamp_sec
-                  << " Diff:" << snapshot.diff_sec << " kind:'" << packet.kind
-                  << "' size:" << std::setfill('0') << std::setw(8)
-                  << packet.payload_size << std::setfill(' ');
-        if (!nalu_information.empty()) {
-            std::cout << ' ' << nalu_information;
+            std::cout << std::setfill('0') << "Frame:" << std::setw(7)
+                      << snapshot.frame_count << " Fps:" << std::setw(2)
+                      << static_cast<int>(snapshot.instant_fps)
+                      << std::setfill(' ') << std::fixed
+                      << std::setprecision(1) << " AvgFps:" << snapshot.avg_fps
+                      << '/' << snapshot.min_fps << '/' << snapshot.max_fps
+                      << std::setprecision(3) << " AvgDiff:"
+                      << snapshot.avg_diff << '/' << snapshot.min_diff << '/'
+                      << snapshot.max_diff << " ts:" << snapshot.timestamp_sec
+                      << " Diff:" << snapshot.diff_sec << " kind:'"
+                      << packet.kind << "' size:" << std::setfill('0')
+                      << std::setw(8) << packet.payload_size
+                      << std::setfill(' ');
+            if (!nalu_information.empty()) {
+                std::cout << ' ' << nalu_information;
+            }
+            std::cout << '\n' << std::flush;
         }
-        std::cout << '\n' << std::flush;
     }
 
     return DrainResult::Stopped;
@@ -302,7 +305,8 @@ int RpiCamTsApp::run() {
     } else {
         std::cerr << "[RpiCamTs] camera configuration sent\n";
         const DrainResult drain_result = drain_video_pipe(
-            video_pipe[0], options_.output_mode, h264_writer, ts_muxer);
+            video_pipe[0], options_.output_mode, h264_writer, ts_muxer,
+            options_.verbose);
         if (drain_result == DrainResult::ReadError ||
             drain_result == DrainResult::BackendError ||
             drain_result == DrainResult::WriteError) {

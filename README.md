@@ -17,8 +17,9 @@ The project currently builds `RpiCamTs`, a pipeline verification program.
 It launches the `mtxrpicam` backend from the
 `mediamtx-rpicamera-fork` submodule, sends camera parameters through the
 config pipe, reads H264 encoded video packets, and prints frame, FPS,
-timestamp, packet size, and NALU information. It also writes the encoded H264
-payload to either a raw `.264`/`.h264` file or an MPEG-TS `.ts` file.
+timestamp, packet size, and NALU information when verbose output is enabled.
+It also writes the encoded H264 payload to either a raw `.264`/`.h264` file or
+an MPEG-TS `.ts` file.
 
 ## Source Layout
 
@@ -130,8 +131,9 @@ Run it:
 ```
 
 On a Raspberry Pi camera system, the program launches the backend, writes the
-raw H264 stream to `video.264`, and prints one line per encoded H264 frame.
-Press `Ctrl+C` to stop it cleanly.
+raw H264 stream to `video.264`, and runs without per-frame output. Pass `-v` or
+`--verbose` to print one diagnostic line per encoded H264 frame. Press
+`Ctrl+C` to stop it cleanly.
 
 ## Raw H264 Output
 
@@ -185,10 +187,13 @@ DTS strictly increasing.
 Usage:
 
 ```text
-RpiCamTs [output.264|output.h264|output.ts]
-RpiCamTs [config.yml] [output.264|output.h264|output.ts]
+RpiCamTs [-v|--verbose] [output.264|output.h264|output.ts]
+RpiCamTs [-v|--verbose] [config.yml] [output.264|output.h264|output.ts]
 RpiCamTs --generate-default-config <output.yml>
 ```
+
+Use `-v` or `--verbose` to print frame, FPS, timestamp, packet size, and H264
+NALU information while recording. Per-frame output is disabled by default.
 
 ## Configuration File
 
