@@ -3,9 +3,11 @@
 #include <climits>
 #include <cstdint>
 #include <fstream>
+#include <iomanip>
 #include <limits>
 #include <random>
 #include <regex>
+#include <sstream>
 #include <system_error>
 
 namespace {
@@ -43,6 +45,17 @@ bool parse_positive_int(const std::string &value, int &result) {
     return parse_nonnegative_int(value, result) && result > 0;
 }
 
+bool parse_padded_nonnegative_int(const std::string &value, int &result) {
+    if (value.empty()) {
+        return false;
+    }
+
+    const std::size_t first_digit = value.find_first_not_of('0');
+    return parse_nonnegative_int(
+        first_digit == std::string::npos ? "0" : value.substr(first_digit),
+        result);
+}
+
 bool parse_file_segmentation_size(const std::string &value,
                                   std::uint64_t &size_bytes) {
     static const std::regex pattern(R"(^([1-9][0-9]*)(MB|GB)$)");
@@ -77,7 +90,13 @@ bool parse_record_filename(const std::string &filename, int &file_index) {
     if (!std::regex_match(filename, match, pattern)) {
         return false;
     }
-    return parse_nonnegative_int(match[1].str(), file_index);
+    return parse_padded_nonnegative_int(match[1].str(), file_index);
+}
+
+std::string format_file_index(int file_index) {
+    std::ostringstream output;
+    output << std::setfill('0') << std::setw(3) << file_index;
+    return output.str();
 }
 
 std::string random_suffix() {
@@ -376,7 +395,7 @@ StorageIndex::next_record_path(std::string &error_message) const {
     const std::filesystem::path folder =
         storage_root_ / std::to_string(result.folder_index);
     for (int attempt = 0; attempt < kRandomPathAttempts; ++attempt) {
-        result.filename = std::to_string(result.file_index) + "_" +
+        result.filename = format_file_index(result.file_index) + "_" +
                           random_suffix() + ".ts";
         result.relative_path =
             std::filesystem::path(std::to_string(result.folder_index)) /

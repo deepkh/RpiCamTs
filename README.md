@@ -202,11 +202,13 @@ numbered `.ts` files:
 /path/to/records/
   index.yml
   0/
-    0_ab12cd.ts
-    1_x8k2qa.ts
+    000_ab12cd.ts
+    001_x8k2qa.ts
   1/
-    0_ka2x9f.ts
+    000_ka2x9f.ts
 ```
+
+Record file indexes are zero-padded to at least three digits.
 
 The index begins with the managed storage settings:
 
