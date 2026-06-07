@@ -18,8 +18,8 @@ It launches the `mtxrpicam` backend from the
 `mediamtx-rpicamera-fork` submodule, sends camera parameters through the
 config pipe, reads H264 encoded video packets, and prints frame, FPS,
 timestamp, packet size, and NALU information when verbose output is enabled.
-It also writes the encoded H264 payload to either a raw `.264`/`.h264` file or
-an MPEG-TS `.ts` file.
+It also writes the encoded H264 payload to a raw `.264`/`.h264` file, a single
+MPEG-TS `.ts` file, or managed MPEG-TS segments.
 
 ## Source Layout
 
@@ -33,6 +33,8 @@ modules:
 - `default_config.cpp` - default YAML configuration generation
 - `h264_file_writer.cpp` - raw H264 output
 - `ts_muxer_ffmpeg.cpp` - FFmpeg MPEG-TS output
+- `storage_index.cpp` - managed recording index
+- `storage_recorder.cpp` - managed MPEG-TS segmentation and locking
 - `mtxrpicam_process.cpp` - backend process launch
 - `packet_io.cpp` - pipe packet read/write helpers
 - `h264_inspector.cpp` - H264 NALU information extraction
@@ -184,11 +186,53 @@ packet represents one H264 access unit. If two frame timestamps resolve to the
 same 90 kHz MPEG-TS tick, the later timestamp is advanced by one tick to keep
 DTS strictly increasing.
 
+## Managed Storage Recording
+
+RpiCamTs can record MPEG-TS files into a managed storage directory:
+
+```bash
+./dst/RpiCamTs --storage /path/to/records
+./dst/RpiCamTs camera.yml --storage /path/to/records
+```
+
+When managed storage is enabled, RpiCamTs creates numbered folders and
+numbered `.ts` files:
+
+```text
+/path/to/records/
+  index.yml
+  0/
+    0_ab12cd.ts
+    1_x8k2qa.ts
+  1/
+    0_ka2x9f.ts
+```
+
+The index begins with the managed storage settings:
+
+```yaml
+version: 1
+maximum_file_num: 10
+file_segmentatin_size: 1GB
+folders:
+```
+
+`maximum_file_num` controls the number of record files in each numbered
+folder. `file_segmentatin_size` controls when RpiCamTs rotates to the next file
+and accepts a positive integer followed by `MB` or `GB`, such as `1MB` or
+`1GB`. These units use 1024-based sizes. Rotation happens after completing the
+current H264 access unit, so a segment can exceed the configured size by one
+access unit. The `index.yml` file records all managed record file names and is
+updated atomically. A `.lock` file prevents two RpiCamTs processes from
+recording to the same storage directory at once.
+
 Usage:
 
 ```text
 RpiCamTs [-v|--verbose] [output.264|output.h264|output.ts]
 RpiCamTs [-v|--verbose] [config.yml] [output.264|output.h264|output.ts]
+RpiCamTs [-v|--verbose] --storage <records_dir>
+RpiCamTs [-v|--verbose] [config.yml] --storage <records_dir>
 RpiCamTs --generate-default-config <output.yml>
 ```
 
@@ -251,7 +295,6 @@ For safety, RpiCamTs will not overwrite an existing config file.
 
 Future stages may include:
 
-- Add segment recording
 - Add storage retention policy
 - Add systemd daemon support
 

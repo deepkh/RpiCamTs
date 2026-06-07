@@ -30,6 +30,8 @@ add_executable(RpiCamTs
     src/path_utils.cpp
     src/signal_handler.cpp
     src/stats.cpp
+    src/storage_index.cpp
+    src/storage_recorder.cpp
     src/ts_muxer_ffmpeg.cpp
 )
 

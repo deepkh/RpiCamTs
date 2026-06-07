@@ -10,6 +10,7 @@
 #include "path_utils.h"
 #include "signal_handler.h"
 #include "stats.h"
+#include "storage_recorder.h"
 #include "ts_muxer_ffmpeg.h"
 
 #include <cerrno>
@@ -35,7 +36,8 @@ enum class DrainResult {
 
 DrainResult drain_video_pipe(int fd, OutputMode output_mode,
                              H264FileWriter &h264_writer,
-                             TsMuxerFFmpeg &ts_muxer, bool verbose) {
+                             TsMuxerFFmpeg &ts_muxer,
+                             StorageRecorder *storage_recorder, bool verbose) {
     FrameStats stats;
     std::vector<std::uint8_t> pending_h264_prefix;
 
@@ -112,11 +114,20 @@ DrainResult drain_video_pipe(int fd, OutputMode output_mode,
                     size = access_unit.size();
                 }
 
-                if (!ts_muxer.write_h264_packet(
-                        data, size, packet.timestamp, is_keyframe,
-                        error_message)) {
-                    std::cerr << "[RpiCamTs] Failed to write MPEG-TS output: "
-                              << error_message << '\n';
+                const bool write_ok = storage_recorder != nullptr
+                                          ? storage_recorder->write_h264_packet(
+                                                data, size, packet.timestamp,
+                                                is_keyframe, error_message)
+                                          : ts_muxer.write_h264_packet(
+                                                data, size, packet.timestamp,
+                                                is_keyframe, error_message);
+                if (!write_ok) {
+                    std::cerr
+                        << (storage_recorder != nullptr
+                                ? "[RpiCamTs] Failed to write managed MPEG-TS "
+                                  "storage output: "
+                                : "[RpiCamTs] Failed to write MPEG-TS output: ")
+                        << error_message << '\n';
                     return DrainResult::WriteError;
                 }
             }
@@ -186,7 +197,16 @@ int RpiCamTsApp::run() {
         }
     }
 
-    if (options_.output_path_explicit) {
+    if (options_.storage_mode) {
+        const std::string storage_path =
+            absolute_path_allow_missing(options_.storage_path);
+        if (storage_path.empty()) {
+            std::cerr << "[RpiCamTs] Invalid storage path: "
+                      << options_.storage_path << '\n';
+            return 1;
+        }
+        options_.storage_path = storage_path;
+    } else if (options_.output_path_explicit) {
         const std::string output_path =
             absolute_path_allow_missing(options_.output_path);
         if (output_path.empty()) {
@@ -241,6 +261,7 @@ int RpiCamTsApp::run() {
 
     H264FileWriter h264_writer;
     TsMuxerFFmpeg ts_muxer;
+    StorageRecorder storage_recorder;
     std::string output_error;
     if (options_.output_mode == OutputMode::RawH264) {
         if (!h264_writer.open(options_.output_path, output_error)) {
@@ -252,16 +273,30 @@ int RpiCamTsApp::run() {
                   << h264_writer.path() << '\n' << std::flush;
     } else {
         TsMuxerConfig ts_config;
-        ts_config.output_path = options_.output_path;
         ts_config.width = get_camera_param_int(config.values, "Width", 2304);
         ts_config.height = get_camera_param_int(config.values, "Height", 1296);
-        if (!ts_muxer.open(ts_config, output_error)) {
-            std::cerr << "[RpiCamTs] Failed to open MPEG-TS output file: "
-                      << output_error << '\n';
-            return 1;
+        if (options_.storage_mode) {
+            if (!storage_recorder.open(options_.storage_path, ts_config,
+                                       output_error)) {
+                std::cerr << "[RpiCamTs] Failed to open managed MPEG-TS "
+                             "storage: "
+                          << output_error << '\n';
+                return 1;
+            }
+            std::cout << "[RpiCamTs] Writing managed MPEG-TS storage to: "
+                      << options_.storage_path << '\n'
+                      << std::flush;
+        } else {
+            ts_config.output_path = options_.output_path;
+            if (!ts_muxer.open(ts_config, output_error)) {
+                std::cerr << "[RpiCamTs] Failed to open MPEG-TS output file: "
+                          << output_error << '\n';
+                return 1;
+            }
+            std::cout << "[RpiCamTs] Writing MPEG-TS stream to: "
+                      << ts_muxer.path() << '\n'
+                      << std::flush;
         }
-        std::cout << "[RpiCamTs] Writing MPEG-TS stream to: "
-                  << ts_muxer.path() << '\n' << std::flush;
     }
 
     if (!install_signal_handlers()) {
@@ -306,6 +341,7 @@ int RpiCamTsApp::run() {
         std::cerr << "[RpiCamTs] camera configuration sent\n";
         const DrainResult drain_result = drain_video_pipe(
             video_pipe[0], options_.output_mode, h264_writer, ts_muxer,
+            options_.storage_mode ? &storage_recorder : nullptr,
             options_.verbose);
         if (drain_result == DrainResult::ReadError ||
             drain_result == DrainResult::BackendError ||
@@ -332,6 +368,7 @@ int RpiCamTsApp::run() {
 
     h264_writer.close();
     ts_muxer.close();
+    storage_recorder.close();
     std::cerr << "[RpiCamTs] stopped\n";
     return result;
 }

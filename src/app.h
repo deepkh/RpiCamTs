@@ -15,6 +15,9 @@ struct RpiCamTsOptions {
     bool output_path_explicit = false;
     OutputMode output_mode = OutputMode::RawH264;
 
+    bool storage_mode = false;
+    std::string storage_path;
+
     bool verbose = false;
 
     bool generate_default_config = false;

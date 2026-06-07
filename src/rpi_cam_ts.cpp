@@ -46,7 +46,17 @@ void print_usage(const char *program_name) {
               << " [-v|--verbose] [config.yml] "
                  "[output.264|output.h264|output.ts]\n"
               << "  " << program_name
+              << " [-v|--verbose] --storage <records_dir>\n"
+              << "  " << program_name
+              << " [-v|--verbose] [config.yml] --storage <records_dir>\n"
+              << "  " << program_name
               << " --generate-default-config <output.yml>\n";
+}
+
+void set_storage_path(const std::string &path, RpiCamTsOptions &options) {
+    options.storage_mode = true;
+    options.storage_path = path;
+    options.output_mode = OutputMode::MpegTs;
 }
 
 } // namespace
@@ -83,6 +93,14 @@ int main(int argc, char **argv) {
                set_output_path(arguments[1], options)) {
         options.config_path = arguments[0];
         options.config_path_explicit = true;
+    } else if (arguments.size() == 2 && arguments[0] == "--storage" &&
+               !arguments[1].empty()) {
+        set_storage_path(arguments[1], options);
+    } else if (arguments.size() == 3 && is_config_path(arguments[0]) &&
+               arguments[1] == "--storage" && !arguments[2].empty()) {
+        options.config_path = arguments[0];
+        options.config_path_explicit = true;
+        set_storage_path(arguments[2], options);
     } else {
         print_usage(argv[0]);
         return 1;
