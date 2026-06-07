@@ -34,8 +34,8 @@ class StorageIndex {
     std::filesystem::path storage_root_;
     std::filesystem::path index_path_;
     std::map<int, std::vector<std::string>> folders_;
-    int maximum_file_num_ = 10;
-    std::string file_segmentation_size_ = "1GB";
+    int maximum_file_num_ = 50;
+    std::string file_segmentation_size_ = "200MB";
     std::uint64_t file_segmentation_size_bytes_ =
-        1024ULL * 1024ULL * 1024ULL;
+        200ULL * 1024ULL * 1024ULL;
 };

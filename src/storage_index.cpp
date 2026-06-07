@@ -12,8 +12,8 @@
 
 namespace {
 
-constexpr int kDefaultMaximumFileNum = 10;
-constexpr char kDefaultFileSegmentationSize[] = "1GB";
+constexpr int kDefaultMaximumFileNum = 50;
+constexpr char kDefaultFileSegmentationSize[] = "200MB";
 constexpr std::uint64_t kMegabyteBytes = 1024ULL * 1024ULL;
 constexpr std::uint64_t kGigabyteBytes = 1024ULL * 1024ULL * 1024ULL;
 constexpr int kRandomPathAttempts = 100;
@@ -125,7 +125,7 @@ bool StorageIndex::load_or_create(const std::filesystem::path &storage_root,
     folders_.clear();
     maximum_file_num_ = kDefaultMaximumFileNum;
     file_segmentation_size_ = kDefaultFileSegmentationSize;
-    file_segmentation_size_bytes_ = kGigabyteBytes;
+    file_segmentation_size_bytes_ = 200 * kMegabyteBytes;
     storage_root_ = storage_root;
     index_path_ = storage_root_ / "index.yml";
 

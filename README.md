@@ -214,8 +214,8 @@ The index begins with the managed storage settings:
 
 ```yaml
 version: 1
-maximum_file_num: 10
-file_segmentatin_size: 1GB
+maximum_file_num: 50
+file_segmentatin_size: 200MB
 folders:
 ```
 
