@@ -200,15 +200,15 @@ numbered `.ts` files:
 
 ```text
 /path/to/records/
-  index.yml
-  0/
+  index000.yaml
+  000/
     000_ab12cd.ts
     001_x8k2qa.ts
-  1/
+  001/
     000_ka2x9f.ts
 ```
 
-Record file indexes are zero-padded to at least three digits.
+Folder and record file indexes are zero-padded to at least three digits.
 
 The index begins with the managed storage settings:
 
@@ -217,16 +217,31 @@ version: 1
 maximum_file_num: 50
 file_segmentatin_size: 200MB
 folders:
+  000:
+    - 000_ab12cd.ts
 ```
 
 `maximum_file_num` controls the number of record files in each numbered
-folder. `file_segmentatin_size` controls when RpiCamTs rotates to the next file
+folder, not the highest file index. For example, a sparse folder containing
+`010_*.ts` and `100_*.ts` has two files and continues at `101_*.ts`.
+`file_segmentatin_size` controls when RpiCamTs rotates to the next file
 and accepts a positive integer followed by `MB` or `GB`, such as `1MB` or
 `1GB`. These units use 1024-based sizes. Rotation happens after completing the
 current H264 access unit, so a segment can exceed the configured size by one
-access unit. The `index.yml` file records all managed record file names and is
-updated atomically. A `.lock` file prevents two RpiCamTs processes from
-recording to the same storage directory at once.
+access unit.
+
+Storage indexes are named `index000.yaml` through `index999.yaml`. RpiCamTs
+uses the index with the highest numeric suffix as the current index and updates
+it atomically. When the latest index is invalid or cannot be read, RpiCamTs
+leaves it unchanged and creates the next numbered index. It scans the highest
+numbered recording folder and the highest numbered `.ts` file in that folder
+to determine the next record path. Only newly recorded files are written to
+the replacement index; historical files are not reconstructed into it. A
+corrupt `index999.yaml` cannot be advanced and causes startup to fail.
+
+Legacy unpadded recording folders are included in the recovery scan, but all
+new folders use the padded naming rule. A `.lock` file prevents two RpiCamTs
+processes from recording to the same storage directory at once.
 
 Usage:
 

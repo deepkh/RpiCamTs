@@ -54,3 +54,21 @@ target_compile_options(RpiCamTs PRIVATE
     -Wpedantic
     ${FFMPEG_CFLAGS_OTHER}
 )
+
+include(CTest)
+
+if(BUILD_TESTING)
+    add_executable(storage_index_test
+        tests/storage_index_test.cpp
+        src/storage_index.cpp
+    )
+
+    target_include_directories(storage_index_test PRIVATE src)
+    target_compile_options(storage_index_test PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+    )
+
+    add_test(NAME storage_index_test COMMAND storage_index_test)
+endif()
